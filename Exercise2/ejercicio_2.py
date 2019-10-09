@@ -153,3 +153,60 @@ X = np.concatenate([np.ones((m, 1)), X], axis=1)
 # element (for $j = 0, 1, \cdots , n$) is defined as follows:
 # 
 # $$ \frac{\partial J(\theta)}{\partial \theta_j} = \frac{1}{m} \sum_{i=1}^m \left( h_\theta \left( x^{(i)} \right) - y^{(i)} \right) x_j^{(i)} $$
+
+#%%
+def costFunction(theta, X, y):
+    """    
+    Instructions
+    ------------
+    Compute the cost of a particular choice of theta. You should set J to 
+    the cost. Compute the partial derivatives and set grad to the partial
+    derivatives of the cost w.r.t. each parameter in theta.
+    """
+    # Initialize some useful values
+    m = y.size  # number of training examples
+
+    # You need to return the following variables correctly 
+    J = 0
+    grad = np.zeros(theta.shape)
+
+    # ====================== YOUR CODE HERE ======================
+    
+    h = sigmoid(np.dot(theta,np.transpose(X)))
+
+    J = (1/m)*np.sum((np.dot(-y,np.log(h)))-(np.dot((1-y),np.log(1-h))))
+
+    for i in range(0,grad.size):
+        grad[i] = (1/m)*np.sum(np.dot((h-y),X[:,i]))
+    
+    # =============================================================
+    return J, grad
+
+#%% [markdown]
+# Once you are done call your `costFunction` using two test cases for  $\theta$ by executing the next cell.
+
+#%%
+# Initialize fitting parameters
+initial_theta = np.zeros(n+1)
+
+cost, grad = costFunction(initial_theta, X, y)
+
+print('Cost at initial theta (zeros): {:.3f}'.format(cost))
+print('Expected cost (approx): 0.693\n')
+
+print('Gradient at initial theta (zeros):')
+print('\t[{:.4f}, {:.4f}, {:.4f}]'.format(*grad))
+print('Expected gradients (approx):\n\t[-0.1000, -12.0092, -11.2628]\n')
+
+# Compute and display cost and gradient with non-zero theta
+test_theta = np.array([-24, 0.2, 0.2])
+cost, grad = costFunction(test_theta, X, y)
+
+print('Cost at test theta: {:.3f}'.format(cost))
+print('Expected cost (approx): 0.218\n')
+
+print('Gradient at test theta:')
+print('\t[{:.3f}, {:.3f}, {:.3f}]'.format(*grad))
+print('Expected gradients (approx):\n\t[0.043, 2.566, 2.647]')
+
+#%%
