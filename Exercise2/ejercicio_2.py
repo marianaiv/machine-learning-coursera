@@ -75,7 +75,6 @@ def plotData(X, y):
 #%%
 # Now, we call the implemented function to display the loaded data:
 
-
 #%%
 plotData(X, y)
 # add axes labels
@@ -98,9 +97,7 @@ pass
 # 
 # $$g(z) = \frac{1}{1+e^{-z}}$$.
 # 
-# Your first step is to implement this function `sigmoid` so it can be
-# called by the rest of your program. When you are finished, try testing a few
-# values by calling `sigmoid(x)` in a new cell. For large positive values of `x`, the sigmoid should be close to 1, while for large negative values, the sigmoid should be close to 0. Evaluating `sigmoid(0)` should give you exactly 0.5.
+
 #%%
 def sigmoid(z):
     """
@@ -110,8 +107,7 @@ def sigmoid(z):
     """
     # convert input to a numpy array
     z = np.array(z)
-    
-    # You need to return the following variables correctly 
+   
     g = np.zeros(z.shape)
 
     # ====================== YOUR CODE HERE ======================
@@ -122,7 +118,7 @@ def sigmoid(z):
     return g
 
 #%% [markdown]
-# The following cell evaluates the sigmoid function at `z=0`. You should get a value of 0.5. You can also try different values for `z` to experiment with the sigmoid function.
+# The following cell evaluates the sigmoid function at `z=0`. You should get a value of 0.5.
 
 #%%
 # Test the implementation of sigmoid function here
@@ -163,10 +159,8 @@ def costFunction(theta, X, y):
     the cost. Compute the partial derivatives and set grad to the partial
     derivatives of the cost w.r.t. each parameter in theta.
     """
-    # Initialize some useful values
     m = y.size  # number of training examples
 
-    # You need to return the following variables correctly 
     J = 0
     grad = np.zeros(theta.shape)
 
@@ -183,7 +177,7 @@ def costFunction(theta, X, y):
     return J, grad
 
 #%% [markdown]
-# Once you are done call your `costFunction` using two test cases for  $\theta$ by executing the next cell.
+# Test cases for  $\theta$:
 
 #%%
 # Initialize fitting parameters
