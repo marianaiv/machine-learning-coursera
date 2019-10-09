@@ -203,4 +203,76 @@ print('Gradient at test theta:')
 print('\t[{:.3f}, {:.3f}, {:.3f}]'.format(*grad))
 print('Expected gradients (approx):\n\t[0.043, 2.566, 2.647]')
 
+#%% [markdown]
+# #### 1.2.3 Learning parameters using `scipy.optimize`
+#
+# This time, instead of taking gradient descent steps, you will use the [`scipy.optimize` module](https://docs.scipy.org/doc/scipy/reference/optimize.html). SciPy is a numerical computing library for `python`. It provides an optimization module for root finding and minimization. As of `scipy 1.0`, the function `scipy.optimize.minimize` is the method to use for optimization problems(both constrained and unconstrained).
+# 
+# For logistic regression, you want to optimize the cost function $J(\theta)$ with parameters $\theta$.
+# Concretely, you are going to use `optimize.minimize` to find the best parameters $\theta$ for the logistic regression cost function, given a fixed dataset (of X and y values). You will pass to `optimize.minimize` the following inputs:
+# - `costFunction`: A cost function that, when given the training set and a particular $\theta$, computes the logistic regression cost and gradient with respect to $\theta$ for the dataset (X, y). It is important to note that we only pass the name of the function without the parenthesis. This indicates that we are only providing a reference to this function, and not evaluating the result from this function.
+# - `initial_theta`: The initial values of the parameters we are trying to optimize.
+# - `(X, y)`: These are additional arguments to the cost function.
+# - `jac`: Indication if the cost function returns the Jacobian (gradient) along with cost value. (True)
+# - `method`: Optimization method/algorithm to use
+# - `options`: Additional options which might be specific to the specific optimization method. In the following, we only tell the algorithm the maximum number of iterations before it terminates.
+#%%
+# set options for optimize.minimize
+options= {'maxiter': 400}
+
+# see documention for scipy's optimize.minimize  for description about
+# the different parameters
+# The function returns an object `OptimizeResult`
+# We use truncated Newton algorithm for optimization which is 
+# equivalent to MATLAB's fminunc
+# See https://stackoverflow.com/questions/18801002/fminunc-alternate-in-numpy
+res = optimize.minimize(costFunction,
+                        initial_theta,
+                        (X, y),
+                        jac=True,
+                        method='TNC',
+                        options=options)
+
+# the fun property of `OptimizeResult` object returns
+# the value of costFunction at optimized theta
+cost = res.fun
+
+# the optimized theta is in the x property
+theta = res.x
+
+# Print theta to screen
+print('Cost at theta found by optimize.minimize: {:.3f}'.format(cost))
+print('Expected cost (approx): 0.203\n');
+
+print('theta:')
+print('\t[{:.3f}, {:.3f}, {:.3f}]'.format(*theta))
+print('Expected theta (approx):\n\t[-25.161, 0.206, 0.201]')
+
+#%% [markdown]
+# Once `optimize.minimize` completes, we want to use the final value for $\theta$ to visualize the decision boundary on the training data. 
+
+#%%
+def plotDecisionBoundary(plotData, theta, X, y):
+    # Plot Data (remember first column in X is the intercept)
+    plotData(X[:, 1:3], y)
+    
+    # Only need 2 points to define a line, so choose two endpoints
+    x_boundary = np.array([np.min(X[:, 1]), np.max(X[:, 1])])
+
+    # Decision boundary occurs when h = 0, or when
+    # theta0 + theta1*x1 + theta2*x2 = 0
+    # y=mx+b is replaced by x2 = (-1/thetheta2)(theta0 + theta1*x1)
+    y_boundary = (-1/theta[2])*(theta[0]+theta[1]*x_boundary)
+
+    pyplot.plot(x_boundary, y_boundary, 'r-')
+
+    # Legend
+    pyplot.legend(['Admitted', 'Not admitted', 'Decision Boundary'])
+    pyplot.xlim([30, 100])
+    pyplot.ylim([30, 100])
+
+#%%
+# Plot Boundary
+plotDecisionBoundary(plotData, theta, X, y)
+
 #%%
