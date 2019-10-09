@@ -209,13 +209,7 @@ print('Expected gradients (approx):\n\t[0.043, 2.566, 2.647]')
 # This time, instead of taking gradient descent steps, you will use the [`scipy.optimize` module](https://docs.scipy.org/doc/scipy/reference/optimize.html). SciPy is a numerical computing library for `python`. It provides an optimization module for root finding and minimization. As of `scipy 1.0`, the function `scipy.optimize.minimize` is the method to use for optimization problems(both constrained and unconstrained).
 # 
 # For logistic regression, you want to optimize the cost function $J(\theta)$ with parameters $\theta$.
-# Concretely, you are going to use `optimize.minimize` to find the best parameters $\theta$ for the logistic regression cost function, given a fixed dataset (of X and y values). You will pass to `optimize.minimize` the following inputs:
-# - `costFunction`: A cost function that, when given the training set and a particular $\theta$, computes the logistic regression cost and gradient with respect to $\theta$ for the dataset (X, y). It is important to note that we only pass the name of the function without the parenthesis. This indicates that we are only providing a reference to this function, and not evaluating the result from this function.
-# - `initial_theta`: The initial values of the parameters we are trying to optimize.
-# - `(X, y)`: These are additional arguments to the cost function.
-# - `jac`: Indication if the cost function returns the Jacobian (gradient) along with cost value. (True)
-# - `method`: Optimization method/algorithm to use
-# - `options`: Additional options which might be specific to the specific optimization method. In the following, we only tell the algorithm the maximum number of iterations before it terminates.
+# Concretely, you are going to use `optimize.minimize` to find the best parameters $\theta$ for the logistic regression cost function, given a fixed dataset (of X and y values).
 #%%
 # set options for optimize.minimize
 options= {'maxiter': 400}
@@ -274,5 +268,53 @@ def plotDecisionBoundary(plotData, theta, X, y):
 #%%
 # Plot Boundary
 plotDecisionBoundary(plotData, theta, X, y)
+
+#%% [markdown]
+# <a id="section4"></a>
+# #### 1.2.4 Evaluating logistic regression
+# 
+# After learning the parameters, you can use the model to predict whether a particular student will be admitted. 
+# Another way to evaluate the quality of the parameters we have found is to see how well the learned model predicts on our training set. In this part, your task is to complete the code in function `predict`. The predict function will produce “1” or “0” predictions given a dataset and a learned parameter vector $\theta$. 
+# <a id="predict"></a>
+
+#%%
+def predict(theta, X):
+    """
+    Instructions
+    ------------
+    Complete the following code to make predictions using your learned 
+    logistic regression parameters.You should set p to a vector of 0's and 1's    
+    """
+    m = X.shape[0] # Number of training examples
+
+    # You need to return the following variables correctly
+    p = np.zeros(m)
+
+    # ====================== YOUR CODE HERE ======================
+    h = sigmoid(np.dot(X, theta))
+    for i in range (0,h.size):
+        if h[i] >= 0.5:
+            p[i] = 1
+        else: 
+            p[i] = 0
+
+    # ============================================================
+    return p
+
+#%% [markdown]
+# After you have completed the code in `predict`, we proceed to report the training accuracy of your classifier by computing the percentage of examples it got correct.
+
+#%%
+#  Predict probability for a student with score 45 on exam 1 
+#  and score 85 on exam 2 
+prob = sigmoid(np.dot([1, 45, 85], theta))
+print('For a student with scores 45 and 85,'
+      'we predict an admission probability of {:.3f}'.format(prob))
+print('Expected value: 0.775 +/- 0.002\n')
+
+# Compute accuracy on our training set
+p = predict(theta, X)
+print('Train Accuracy: {:.2f} %'.format(np.mean(p == y) * 100))
+print('Expected accuracy (approx): 89.00 %')
 
 #%%
