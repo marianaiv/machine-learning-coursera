@@ -36,8 +36,6 @@ get_ipython().run_line_magic('matplotlib', 'inline')
 # In this part of the exercise, you will build a logistic regression model to predict whether a student gets admitted into a university. Suppose that you are the administrator of a university department and
 # you want to determine each applicant’s chance of admission based on their results on two exams. You have historical data from previous applicants that you can use as a training set for logistic regression. For each training example, you have the applicant’s scores on two exams and the admissions
 # decision. Your task is to build a classification model that estimates an applicant’s probability of admission based the scores from those two exams. 
-# 
-# The following cell will load the data and corresponding labels:
 
 #%%
 # Load data
@@ -46,11 +44,8 @@ get_ipython().run_line_magic('matplotlib', 'inline')
 data = np.loadtxt(os.path.join('Data', 'ex2data1.txt'), delimiter=',')
 X, y = data[:, 0:2], data[:, 2]
 
-#%%
 #%% [markdown]
 # ### 1.1 Visualizing the data
-# 
-# Before starting to implement any learning algorithm, it is always good to visualize the data if possible. We  display the data on a 2-dimensional plot by calling the function `plotData`. You will now complete the code in `plotData` so that it displays a figure where the axes are the two exam scores, and the positive and negative examples are shown with different markers.
 
 #%%
 def plotData(X, y):
@@ -78,6 +73,7 @@ def plotData(X, y):
 #%%
 plotData(X, y)
 # add axes labels
+
 pyplot.xlabel('Exam 1 score')
 pyplot.ylabel('Exam 2 score')
 pyplot.legend(['Admitted', 'Not admitted'])
@@ -130,8 +126,6 @@ print('g(', z, ') = ', g)
 #%% [markdown]
 # <a id="section2"></a>
 # #### 1.2.2 Cost function and gradient
-# 
-# Now you will implement the cost function and gradient for logistic regression. Before proceeding we add the intercept term to X. 
 
 #%%
 # Setup the data matrix appropriately, and add ones for the intercept term
@@ -208,8 +202,7 @@ print('Expected gradients (approx):\n\t[0.043, 2.566, 2.647]')
 #
 # This time, instead of taking gradient descent steps, you will use the [`scipy.optimize` module](https://docs.scipy.org/doc/scipy/reference/optimize.html). SciPy is a numerical computing library for `python`. It provides an optimization module for root finding and minimization. As of `scipy 1.0`, the function `scipy.optimize.minimize` is the method to use for optimization problems(both constrained and unconstrained).
 # 
-# For logistic regression, you want to optimize the cost function $J(\theta)$ with parameters $\theta$.
-# Concretely, you are going to use `optimize.minimize` to find the best parameters $\theta$ for the logistic regression cost function, given a fixed dataset (of X and y values).
+# You are going to use `optimize.minimize` to find the best parameters $\theta$ for the logistic regression cost function, given a fixed dataset (of X and y values).
 #%%
 # set options for optimize.minimize
 options= {'maxiter': 400}
@@ -243,9 +236,10 @@ print('\t[{:.3f}, {:.3f}, {:.3f}]'.format(*theta))
 print('Expected theta (approx):\n\t[-25.161, 0.206, 0.201]')
 
 #%% [markdown]
-# Once `optimize.minimize` completes, we want to use the final value for $\theta$ to visualize the decision boundary on the training data. 
+# We want to use the final value for $\theta$ to visualize the decision boundary on the training data. 
 
 #%%
+
 def plotDecisionBoundary(plotData, theta, X, y):
     # Plot Data (remember first column in X is the intercept)
     plotData(X[:, 1:3], y)
@@ -323,8 +317,6 @@ print('Expected accuracy (approx): 89.00 %')
 # 
 # In this part of the exercise, you will implement regularized logistic regression to predict whether microchips from a fabrication plant passes quality assurance (QA). During QA, each microchip goes through various tests to ensure it is functioning correctly.
 # Suppose you are the product manager of the factory and you have the test results for some microchips on two different tests. From these two tests, you would like to determine whether the microchips should be accepted or rejected. To help you make the decision, you have a dataset of test results on past microchips, from which you can build a logistic regression model.
-# 
-# First, we load the data from a CSV file:
 
 #%%
 # Load Data
@@ -364,7 +356,9 @@ pass
 # 
 
 #%%
+# this function was given in the homework
 def mapFeature(X1, X2, degree=6):
+
     """
     Maps the two input features to quadratic features used in the regularization exercise.
 
@@ -411,7 +405,7 @@ X = mapFeature(X[:, 0], X[:, 1])
 # <a id="section5"></a>
 # ### 2.3 Cost function and gradient
 # 
-# Now you will implement code to compute the cost function and gradient for regularized logistic regression. Complete the code for the function `costFunctionReg` below to return the cost and gradient.
+# Now you will implement code to compute the cost function and gradient for regularized logistic regression.
 # 
 # Recall that the regularized cost function in logistic regression is
 # 
@@ -491,4 +485,77 @@ print('Expected gradients (approx) - first five values only:')
 print('\t[0.3460, 0.1614, 0.1948, 0.2269, 0.0922]')
 
 
+#%% [markdown]
+# #### 2.3.1 Learning parameters using `scipy.optimize.minimize`
+
 #%%
+def OptimizeMinimizeReg(X,y,initial_theta,lambda_):
+    # set options for optimize.minimize
+    options= {'maxiter': 400}
+
+    res = optimize.minimize(costFunctionReg,
+                            initial_theta,
+                            (X, y, lambda_),
+                            jac=True,
+                            method='TNC',
+                            options=options)
+
+    # the fun property of `OptimizeResult` object returns
+    # the value of costFunction at optimized theta
+    cost = res.fun
+
+    # the optimized theta is in the x property
+    theta = res.x
+
+    return cost, theta
+
+#%% [markdown]
+# ### 2.4 Plotting the decision boundary
+
+#%%
+def plotBoundary(X,y,initial_theta,lambda_):
+    
+    # Plot Data 
+    plotData(X[:, 1:3], y)
+
+    # calculating cost and theta
+    cost, theta = OptimizeMinimizeReg(X, y, initial_theta, lambda_)
+
+    # the grid 
+    xgrid = np.linspace(-1, 1.5, 50)
+    ygrid = np.linspace(-1, 1.5, 50)
+    
+    z = np.zeros((xgrid.size, ygrid.size))
+
+    # evaluating hypotesis over z
+    for i in range(xgrid.size):
+        for j in range(ygrid.size):
+            featuresij = mapFeature(np.array([xgrid[i]]),np.array([ygrid[j]]))
+            z[i][j] = np.dot (featuresij, theta)
+
+    z = np.transpose(z)
+    pyplot.contour( xgrid, ygrid, z, [0], linewidths=2, colors='r')
+    pyplot.xlabel('Microchip Test 1')
+    pyplot.ylabel('Microchip Test 2')
+    pyplot.legend(['y = 1', 'y = 0'])
+    pyplot.grid(False)
+    pyplot.title('lambda = %0.2f' % lambda_)
+
+
+#%%
+# Plotting for multiple lambda values
+
+lambda_zero = 0
+initial_theta = np.zeros(X.shape[1])
+plotBoundary(X, y, initial_theta, lambda_zero)
+
+lambda_one = 1
+initial_theta = np.zeros(X.shape[1])
+plotBoundary(X, y, initial_theta, lambda_one)
+
+lambda_hundred = 100
+initial_theta = np.zeros(X.shape[1])
+plotBoundary(X, y, initial_theta, lambda_hundred)
+
+#%% [markdown]
+# It shows overfitting for lambda = 0 and too much regularization (underfitting) for lambda = 100
