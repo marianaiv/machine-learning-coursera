@@ -318,3 +318,177 @@ print('Train Accuracy: {:.2f} %'.format(np.mean(p == y) * 100))
 print('Expected accuracy (approx): 89.00 %')
 
 #%%
+#%% [markdown]
+# ## 2 Regularized logistic regression
+# 
+# In this part of the exercise, you will implement regularized logistic regression to predict whether microchips from a fabrication plant passes quality assurance (QA). During QA, each microchip goes through various tests to ensure it is functioning correctly.
+# Suppose you are the product manager of the factory and you have the test results for some microchips on two different tests. From these two tests, you would like to determine whether the microchips should be accepted or rejected. To help you make the decision, you have a dataset of test results on past microchips, from which you can build a logistic regression model.
+# 
+# First, we load the data from a CSV file:
+
+#%%
+# Load Data
+# The first two columns contains the X values and the third column
+# contains the label (y).
+data = np.loadtxt(os.path.join('Data', 'ex2data2.txt'), delimiter=',')
+X = data[:, :2]
+y = data[:, 2]
+
+#%% [markdown]
+# ### 2.1 Visualize the data
+# 
+# Similar to the previous parts of this exercise, `plotData` is used to generate a figure, where the axes are the two test scores, and the positive (y = 1, accepted) and negative (y = 0, rejected) examples are shown with
+# different markers.
+
+#%%
+plotData(X, y)
+# Labels and Legend
+pyplot.xlabel('Microchip Test 1')
+pyplot.ylabel('Microchip Test 2')
+
+# Specified in plot order
+pyplot.legend(['y = 1', 'y = 0'], loc='upper right')
+pass
+
+#%% [markdown]
+# The above figure shows that our dataset cannot be separated into positive and negative examples by a straight-line through the plot. Therefore, a straight-forward application of logistic regression will not perform well on this dataset since logistic regression will only be able to find a linear decision boundary.
+# 
+# ### 2.2 Feature mapping
+# 
+# One way to fit the data better is to create more features from each data point. In the function `mapFeature` defined in the file `utils.py`, we will map the features into all polynomial terms of $x_1$ and $x_2$ up to the sixth power.
+# 
+# $$ \text{mapFeature}(x) = \begin{bmatrix} 1 & x_1 & x_2 & x_1^2 & x_1 x_2 & x_2^2 & x_1^3 & \dots & x_1 x_2^5 & x_2^6 \end{bmatrix}^T $$
+# 
+# As a result of this mapping, our vector of two features (the scores on two QA tests) has been transformed into a 28-dimensional vector. A logistic regression classifier trained on this higher-dimension feature vector will have a more complex decision boundary and will appear nonlinear when drawn in our 2-dimensional plot.
+# While the feature mapping allows us to build a more expressive classifier, it also more susceptible to overfitting. In the next parts of the exercise, you will implement regularized logistic regression to fit the data and also see for yourself how regularization can help combat the overfitting problem.
+# 
+
+#%%
+def mapFeature(X1, X2, degree=6):
+    """
+    Maps the two input features to quadratic features used in the regularization exercise.
+
+    Returns a new feature array with more features, comprising of
+    X1, X2, X1.^2, X2.^2, X1*X2, X1*X2.^2, etc..
+
+    Parameters
+    ----------
+    X1 : array_like
+        A vector of shape (m, 1), containing one feature for all examples.
+
+    X2 : array_like
+        A vector of shape (m, 1), containing a second feature for all examples.
+        Inputs X1, X2 must be the same size.
+
+    degree: int, optional
+        The polynomial degree.
+
+    Returns
+    -------
+    : array_like
+        A matrix of of m rows, and columns depend on the degree of polynomial.
+    """
+    if X1.ndim > 0:
+        out = [np.ones(X1.shape[0])]
+    else:
+        out = [np.ones(1)]
+
+    for i in range(1, degree + 1):
+        for j in range(i + 1):
+            out.append((X1 ** (i - j)) * (X2 ** j))
+
+    if X1.ndim > 0:
+        return np.stack(out, axis=1)
+    else:
+        return np.array(out)
+
+#%%
+# Note that mapFeature also adds a column of ones for us, so the intercept
+# term is handled
+X = mapFeature(X[:, 0], X[:, 1])
+
+#%% [markdown]
+# <a id="section5"></a>
+# ### 2.3 Cost function and gradient
+# 
+# Now you will implement code to compute the cost function and gradient for regularized logistic regression. Complete the code for the function `costFunctionReg` below to return the cost and gradient.
+# 
+# Recall that the regularized cost function in logistic regression is
+# 
+# $$ J(\theta) = \frac{1}{m} \sum_{i=1}^m \left[ -y^{(i)}\log \left( h_\theta \left(x^{(i)} \right) \right) - \left( 1 - y^{(i)} \right) \log \left( 1 - h_\theta \left( x^{(i)} \right) \right) \right] + \frac{\lambda}{2m} \sum_{j=1}^n \theta_j^2 $$
+# 
+# Note that you should not regularize the parameters $\theta_0$. The gradient of the cost function is a vector where the $j^{th}$ element is defined as follows:
+# 
+# $$ \frac{\partial J(\theta)}{\partial \theta_0} = \frac{1}{m} \sum_{i=1}^m \left( h_\theta \left(x^{(i)}\right) - y^{(i)} \right) x_j^{(i)} \qquad \text{for } j =0 $$
+# 
+# $$ \frac{\partial J(\theta)}{\partial \theta_j} = \left( \frac{1}{m} \sum_{i=1}^m \left( h_\theta \left(x^{(i)}\right) - y^{(i)} \right) x_j^{(i)} \right) + \frac{\lambda}{m}\theta_j \qquad \text{for } j \ge 1 $$
+# <a id="costFunctionReg"></a>
+
+#%%
+def costFunctionReg(theta, X, y, lambda_):
+    """    
+    Instructions
+    ------------
+    Compute the cost `J` of a particular choice of theta.
+    Compute the partial derivatives and set `grad` to the partial
+    derivatives of the cost w.r.t. each parameter in theta.
+    """
+    # Initialize some useful values
+    m = y.size  # number of training examples
+
+    # You need to return the following variables correctly 
+    J = 0
+    grad = np.zeros(theta.shape)
+
+    # ===================== YOUR CODE HERE ======================
+    h = sigmoid(np.dot(theta,np.transpose(X)))
+
+    J = (1/m)*np.sum((np.dot(-y,np.log(h)))-(np.dot((1-y),np.log(1-h))))+(lambda_/(2*m))*np.dot(theta,np.transpose(theta))
+
+    for i in range(0,grad.size):
+        if i == 0:
+            grad[i] = (1/m)*np.sum(np.dot((h-y),X[:,i]))
+        else:
+           grad[i] = (1/m)*np.sum(np.dot((h-y),X[:,i]))+(lambda_/m)*theta[i] 
+
+    # =============================================================
+    return J, grad
+
+#%%
+# Initialize fitting parameters
+initial_theta = np.zeros(X.shape[1])
+
+# Set regularization parameter lambda to 1
+# DO NOT use `lambda` as a variable name in python
+# because it is a python keyword
+lambda_ = 1
+
+# Compute and display initial cost and gradient for regularized logistic
+# regression
+cost, grad = costFunctionReg(initial_theta, X, y, lambda_)
+
+print('Cost at initial theta (zeros): {:.3f}'.format(cost))
+print('Expected cost (approx)       : 0.693\n')
+
+print('Gradient at initial theta (zeros) - first five values only:')
+print('\t[{:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}]'.format(*grad[:5]))
+print('Expected gradients (approx) - first five values only:')
+print('\t[0.0085, 0.0188, 0.0001, 0.0503, 0.0115]\n')
+
+
+# Compute and display cost and gradient
+# with all-ones theta and lambda = 10
+test_theta = np.ones(X.shape[1])
+cost, grad = costFunctionReg(test_theta, X, y, 10)
+
+print('------------------------------\n')
+print('Cost at test theta    : {:.2f}'.format(cost))
+print('Expected cost (approx): 3.16\n')
+
+print('Gradient at initial theta (zeros) - first five values only:')
+print('\t[{:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}]'.format(*grad[:5]))
+print('Expected gradients (approx) - first five values only:')
+print('\t[0.3460, 0.1614, 0.1948, 0.2269, 0.0922]')
+
+
+#%%
