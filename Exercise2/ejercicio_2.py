@@ -10,10 +10,8 @@ except:
 	pass
 #%%
 from IPython import get_ipython
-
 #%% [markdown]
 # # Programming Exercise 2: Logistic Regression
- 
 #%%
 # used for manipulating directory paths
 import os
@@ -29,24 +27,20 @@ from scipy import optimize
 
 # tells matplotlib to embed plots within the notebook
 get_ipython().run_line_magic('matplotlib', 'inline')
-
 #%% [markdown]
 # ## 1 Logistic Regression
 # 
 # In this part of the exercise, you will build a logistic regression model to predict whether a student gets admitted into a university. Suppose that you are the administrator of a university department and
 # you want to determine each applicant’s chance of admission based on their results on two exams. You have historical data from previous applicants that you can use as a training set for logistic regression. For each training example, you have the applicant’s scores on two exams and the admissions
 # decision. Your task is to build a classification model that estimates an applicant’s probability of admission based the scores from those two exams. 
-
 #%%
 # Load data
 # The first two columns contains the exam scores and the third column
 # contains the label.
 data = np.loadtxt(os.path.join('Data', 'ex2data1.txt'), delimiter=',')
 X, y = data[:, 0:2], data[:, 2]
-
 #%% [markdown]
 # ### 1.1 Visualizing the data
-
 #%%
 def plotData(X, y):
     """
@@ -65,20 +59,17 @@ def plotData(X, y):
     pyplot.plot(X[neg, 0], X[neg, 1], 'o', mfc='y', ms=8, mec='k', mew=1)
     
     # ============================================================
-
-
 #%%
 # Now, we call the implemented function to display the loaded data:
 
 #%%
 plotData(X, y)
-# add axes labels
 
+# add axes labels
 pyplot.xlabel('Exam 1 score')
 pyplot.ylabel('Exam 2 score')
 pyplot.legend(['Admitted', 'Not admitted'])
 pass
-
 #%% [markdown]
 # <a id="section1"></a>
 # ### 1.2 Implementation
@@ -92,8 +83,6 @@ pass
 # where function $g$ is the sigmoid function. The sigmoid function is defined as: 
 # 
 # $$g(z) = \frac{1}{1+e^{-z}}$$.
-# 
-
 #%%
 def sigmoid(z):
     """
@@ -112,28 +101,23 @@ def sigmoid(z):
 
     # =============================================================
     return g
-
 #%% [markdown]
 # The following cell evaluates the sigmoid function at `z=0`. You should get a value of 0.5.
-
 #%%
 # Test the implementation of sigmoid function here
 z = 0
 g = sigmoid(z)
 
 print('g(', z, ') = ', g)
-
 #%% [markdown]
 # <a id="section2"></a>
 # #### 1.2.2 Cost function and gradient
-
 #%%
 # Setup the data matrix appropriately, and add ones for the intercept term
 m, n = X.shape
 
 # Add intercept term to X
 X = np.concatenate([np.ones((m, 1)), X], axis=1)
-
 #%% [markdown]
 # Now, complete the code for the function `costFunction` to return the cost and gradient. Recall that the cost function in logistic regression is
 # 
@@ -143,7 +127,6 @@ X = np.concatenate([np.ones((m, 1)), X], axis=1)
 # element (for $j = 0, 1, \cdots , n$) is defined as follows:
 # 
 # $$ \frac{\partial J(\theta)}{\partial \theta_j} = \frac{1}{m} \sum_{i=1}^m \left( h_\theta \left( x^{(i)} \right) - y^{(i)} \right) x_j^{(i)} $$
-
 #%%
 def costFunction(theta, X, y):
     """    
@@ -160,16 +143,17 @@ def costFunction(theta, X, y):
 
     # ====================== YOUR CODE HERE ======================
     
-    h = sigmoid(np.dot(theta,np.transpose(X)))
+    h = sigmoid(np.dot(X,theta))
 
-    J = (1/m)*np.sum((np.dot(-y,np.log(h)))-(np.dot((1-y),np.log(1-h))))
+    J = (1/m)*np.sum(
+        (np.dot(-y,np.log(h)))          # first term
+        -(np.dot((1-y),np.log(1-h))))    # second term
 
     for i in range(0,grad.size):
         grad[i] = (1/m)*np.sum(np.dot((h-y),X[:,i]))
     
     # =============================================================
     return J, grad
-
 #%% [markdown]
 # Test cases for  $\theta$:
 
@@ -234,12 +218,9 @@ print('Expected cost (approx): 0.203\n');
 print('theta:')
 print('\t[{:.3f}, {:.3f}, {:.3f}]'.format(*theta))
 print('Expected theta (approx):\n\t[-25.161, 0.206, 0.201]')
-
 #%% [markdown]
 # We want to use the final value for $\theta$ to visualize the decision boundary on the training data. 
-
 #%%
-
 def plotDecisionBoundary(plotData, theta, X, y):
     # Plot Data (remember first column in X is the intercept)
     plotData(X[:, 1:3], y)
@@ -258,11 +239,9 @@ def plotDecisionBoundary(plotData, theta, X, y):
     pyplot.legend(['Admitted', 'Not admitted', 'Decision Boundary'])
     pyplot.xlim([30, 100])
     pyplot.ylim([30, 100])
-
 #%%
 # Plot Boundary
 plotDecisionBoundary(plotData, theta, X, y)
-
 #%% [markdown]
 # <a id="section4"></a>
 # #### 1.2.4 Evaluating logistic regression
@@ -270,7 +249,6 @@ plotDecisionBoundary(plotData, theta, X, y)
 # After learning the parameters, you can use the model to predict whether a particular student will be admitted. 
 # Another way to evaluate the quality of the parameters we have found is to see how well the learned model predicts on our training set. In this part, your task is to complete the code in function `predict`. The predict function will produce “1” or “0” predictions given a dataset and a learned parameter vector $\theta$. 
 # <a id="predict"></a>
-
 #%%
 def predict(theta, X):
     """
@@ -294,10 +272,8 @@ def predict(theta, X):
 
     # ============================================================
     return p
-
 #%% [markdown]
 # After you have completed the code in `predict`, we proceed to report the training accuracy of your classifier by computing the percentage of examples it got correct.
-
 #%%
 #  Predict probability for a student with score 45 on exam 1 
 #  and score 85 on exam 2 
@@ -305,19 +281,16 @@ prob = sigmoid(np.dot([1, 45, 85], theta))
 print('For a student with scores 45 and 85,'
       'we predict an admission probability of {:.3f}'.format(prob))
 print('Expected value: 0.775 +/- 0.002\n')
-
 # Compute accuracy on our training set
 p = predict(theta, X)
 print('Train Accuracy: {:.2f} %'.format(np.mean(p == y) * 100))
 print('Expected accuracy (approx): 89.00 %')
-
 #%%
 #%% [markdown]
 # ## 2 Regularized logistic regression
 # 
 # In this part of the exercise, you will implement regularized logistic regression to predict whether microchips from a fabrication plant passes quality assurance (QA). During QA, each microchip goes through various tests to ensure it is functioning correctly.
 # Suppose you are the product manager of the factory and you have the test results for some microchips on two different tests. From these two tests, you would like to determine whether the microchips should be accepted or rejected. To help you make the decision, you have a dataset of test results on past microchips, from which you can build a logistic regression model.
-
 #%%
 # Load Data
 # The first two columns contains the X values and the third column
@@ -325,13 +298,11 @@ print('Expected accuracy (approx): 89.00 %')
 data = np.loadtxt(os.path.join('Data', 'ex2data2.txt'), delimiter=',')
 X = data[:, :2]
 y = data[:, 2]
-
 #%% [markdown]
 # ### 2.1 Visualize the data
 # 
 # Similar to the previous parts of this exercise, `plotData` is used to generate a figure, where the axes are the two test scores, and the positive (y = 1, accepted) and negative (y = 0, rejected) examples are shown with
 # different markers.
-
 #%%
 plotData(X, y)
 # Labels and Legend
@@ -341,7 +312,6 @@ pyplot.ylabel('Microchip Test 2')
 # Specified in plot order
 pyplot.legend(['y = 1', 'y = 0'], loc='upper right')
 pass
-
 #%% [markdown]
 # The above figure shows that our dataset cannot be separated into positive and negative examples by a straight-line through the plot. Therefore, a straight-forward application of logistic regression will not perform well on this dataset since logistic regression will only be able to find a linear decision boundary.
 # 
@@ -354,7 +324,6 @@ pass
 # As a result of this mapping, our vector of two features (the scores on two QA tests) has been transformed into a 28-dimensional vector. A logistic regression classifier trained on this higher-dimension feature vector will have a more complex decision boundary and will appear nonlinear when drawn in our 2-dimensional plot.
 # While the feature mapping allows us to build a more expressive classifier, it also more susceptible to overfitting. In the next parts of the exercise, you will implement regularized logistic regression to fit the data and also see for yourself how regularization can help combat the overfitting problem.
 # 
-
 #%%
 # this function was given in the homework
 def mapFeature(X1, X2, degree=6):
@@ -395,12 +364,10 @@ def mapFeature(X1, X2, degree=6):
         return np.stack(out, axis=1)
     else:
         return np.array(out)
-
 #%%
 # Note that mapFeature also adds a column of ones for us, so the intercept
 # term is handled
 X = mapFeature(X[:, 0], X[:, 1])
-
 #%% [markdown]
 # <a id="section5"></a>
 # ### 2.3 Cost function and gradient
@@ -417,7 +384,6 @@ X = mapFeature(X[:, 0], X[:, 1])
 # 
 # $$ \frac{\partial J(\theta)}{\partial \theta_j} = \left( \frac{1}{m} \sum_{i=1}^m \left( h_\theta \left(x^{(i)}\right) - y^{(i)} \right) x_j^{(i)} \right) + \frac{\lambda}{m}\theta_j \qquad \text{for } j \ge 1 $$
 # <a id="costFunctionReg"></a>
-
 #%%
 def costFunctionReg(theta, X, y, lambda_):
     """    
@@ -435,19 +401,22 @@ def costFunctionReg(theta, X, y, lambda_):
     grad = np.zeros(theta.shape)
 
     # ===================== YOUR CODE HERE ======================
-    h = sigmoid(np.dot(theta,np.transpose(X)))
+    h = sigmoid(np.dot(X,theta))
 
-    J = (1/m)*np.sum((np.dot(-y,np.log(h)))-(np.dot((1-y),np.log(1-h))))+(lambda_/(2*m))*np.dot(theta,np.transpose(theta))
+    J = (1/m) * np.sum(
+        np.dot(-y, np.log(h)) # first term
+        -np.dot((1-y), np.log(1-h)) # second term
+    )
+    # agregamos el termino de regularizacion
+    J += (lambda_/(2*m))*np.sum(theta[1:]*theta[1:])
 
-    for i in range(0,grad.size):
-        if i == 0:
-            grad[i] = (1/m)*np.sum(np.dot((h-y),X[:,i]))
-        else:
+    grad[0] = (1/m)*np.sum(np.dot((h-y),X[:,0]))
+
+    for i in range(1,grad.size):
            grad[i] = (1/m)*np.sum(np.dot((h-y),X[:,i]))+(lambda_/m)*theta[i] 
 
     # =============================================================
     return J, grad
-
 #%%
 # Initialize fitting parameters
 initial_theta = np.zeros(X.shape[1])
@@ -483,11 +452,8 @@ print('Gradient at initial theta (zeros) - first five values only:')
 print('\t[{:.4f}, {:.4f}, {:.4f}, {:.4f}, {:.4f}]'.format(*grad[:5]))
 print('Expected gradients (approx) - first five values only:')
 print('\t[0.3460, 0.1614, 0.1948, 0.2269, 0.0922]')
-
-
 #%% [markdown]
 # #### 2.3.1 Learning parameters using `scipy.optimize.minimize`
-
 #%%
 def OptimizeMinimizeReg(X,y,initial_theta,lambda_):
     # set options for optimize.minimize
@@ -508,10 +474,8 @@ def OptimizeMinimizeReg(X,y,initial_theta,lambda_):
     theta = res.x
 
     return cost, theta
-
 #%% [markdown]
 # ### 2.4 Plotting the decision boundary
-
 #%%
 def plotBoundary(X,y,initial_theta,lambda_):
     
@@ -540,8 +504,6 @@ def plotBoundary(X,y,initial_theta,lambda_):
     pyplot.legend(['y = 1', 'y = 0'])
     pyplot.grid(False)
     pyplot.title('lambda = %0.2f' % lambda_)
-
-
 #%%
 # Plotting for multiple lambda values
 
@@ -556,6 +518,8 @@ plotBoundary(X, y, initial_theta, lambda_one)
 lambda_hundred = 100
 initial_theta = np.zeros(X.shape[1])
 plotBoundary(X, y, initial_theta, lambda_hundred)
-
 #%% [markdown]
 # It shows overfitting for lambda = 0 and too much regularization (underfitting) for lambda = 100
+
+
+#%%
