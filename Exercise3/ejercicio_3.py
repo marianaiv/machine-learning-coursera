@@ -182,10 +182,12 @@ def lrCostFunction(theta, X, y, lambda_):
         np.dot(-y, np.log(h)) # first term
         -np.dot((1-y), np.log(1-h)) # second term
     )
-    # agregamos el termino de regularizacion
+    # add the term for regularization
     J += (lambda_/(2*m))*np.sum(theta[1:]*theta[1:])
 
     grad = (1/m)*np.dot(X.T,(h-y))  
+
+    # add regularization
     grad[1:] += (lambda_/m)*theta[1:] # because we don't add anything for j = 0
         
     # =============================================================
@@ -223,3 +225,97 @@ print('Gradients:')
 print(' [{:.6f}, {:.6f}, {:.6f}, {:.6f}]'.format(*grad))
 print('Expected gradients:')
 print(' [0.146561, -0.548558, 0.724722, 1.398003]');
+#%% [markdown]
+# <a id="section2"></a>
+# ### 1.4 One-vs-all Classification
+# 
+# In this part of the exercise, you will implement one-vs-all classification by training multiple regularized logistic regression classifiers, one for each of the $K$ classes in our dataset. In the handwritten digits dataset, $K = 10$, but your code should work for any value of $K$. 
+# 
+# You should now complete the code for the function `oneVsAll` below, to train one classifier for each class. In particular, your code should return all the classifier parameters in a matrix $\theta \in \mathbb{R}^{K \times (N +1)}$, where each row of $\theta$ corresponds to the learned logistic regression parameters for one class. You can do this with a “for”-loop from $0$ to $K-1$, training each classifier independently.
+# 
+# Note that the `y` argument to this function is a vector of labels from 0 to 9. When training the classifier for class $k \in \{0, ..., K-1\}$, you will want a K-dimensional vector of labels $y$, where $y_j \in 0, 1$ indicates whether the $j^{th}$ training instance belongs to class $k$ $(y_j = 1)$, or if it belongs to a different
+# class $(y_j = 0)$. You may find logical arrays helpful for this task. 
+# 
+# Furthermore, you will be using scipy's `optimize.minimize` for this exercise. 
+# <a id="oneVsAll"></a>
+#%%
+def oneVsAll(X, y, num_labels, lambda_):
+    """
+    Instructions
+    ------------
+    You should complete the following code to train `num_labels`
+    logistic regression classifiers with regularization parameter `lambda_`. 
+    
+    """
+    # Some useful variables
+    m, n = X.shape
+    
+    # You need to return the following variables correctly 
+    all_theta = np.zeros((num_labels, n + 1))
+
+    # Add ones to the X data matrix
+    X = np.concatenate([np.ones((m, 1)), X], axis=1)
+
+    # ====================== YOUR CODE HERE ======================
+    # Set initial theta
+    initial_theta = np.zeros(X.shape[1])
+    # Set options for minimize
+    options = {'maxiter': 50}
+
+    # Minimize theta for each class 
+    for ii in range(0,num_labels):
+        res = optimize.minimize(lrCostFunction, 
+                                initial_theta, 
+                                (X, (y==ii), lambda_), 
+                                jac=True, 
+                                method='TNC',
+                                options=options)
+        all_theta[ii,:]=res.x
+    # ============================================================
+    return all_theta
+#%% [markdown]
+# After you have completed the code for `oneVsAll`, the following cell will use your implementation to train a multi-class classifier. 
+
+#%%
+lambda_ = 0.1
+all_theta = oneVsAll(X, y, num_labels, lambda_)
+#%% [markdown]
+# <a id="section3"></a>
+# #### 1.4.1 One-vs-all Prediction
+# 
+# After training your one-vs-all classifier, you can now use it to predict the digit contained in a given image. For each input, you should compute the “probability” that it belongs to each class using the trained logistic regression classifiers. Your one-vs-all prediction function will pick the class for which the corresponding logistic regression classifier outputs the highest probability and return the class label (0, 1, ..., K-1) as the prediction for the input example. You should now complete the code in the function `predictOneVsAll` to use the one-vs-all classifier for making predictions. 
+# <a id="predictOneVsAll"></a>
+#%%
+def predictOneVsAll(all_theta, X):
+    """     
+    Instructions
+    ------------
+    Complete the following code to make predictions using your learned logistic
+    regression parameters (one-vs-all). You should set p to a vector of predictions
+    (from 0 to num_labels-1).
+
+    """
+    m = X.shape[0];
+    num_labels = all_theta.shape[0]
+
+    # You need to return the following variables correctly 
+    p = np.zeros(m)
+
+    # Add ones to the X data matrix
+    X = np.concatenate([np.ones((m, 1)), X], axis=1)
+
+    # ====================== YOUR CODE HERE ======================
+
+    ClassP = utils.sigmoid(np.dot(X,all_theta.T))
+    p = np.argmax(ClassP, axis=1)
+
+    # ============================================================
+    return p
+#%% [markdown]
+# Once you are done, call your `predictOneVsAll` function using the learned value of $\theta$. You should see that the training set accuracy is about 95.1% (i.e., it classifies 95.1% of the examples in the training set correctly).
+
+#%%
+pred = predictOneVsAll(all_theta, X)
+print('Training Set Accuracy: {:.2f}%'.format(np.mean(pred == y) * 100))
+
+#%%
