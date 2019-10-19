@@ -101,15 +101,11 @@ lambda_t = 3
 # 
 # $$ J(\theta) = \frac{1}{m} \sum_{i=1}^m \left[ -y^{(i)} \log \left( h_\theta\left( x^{(i)} \right) \right) - \left(1 - y^{(i)} \right) \log \left(1 - h_\theta \left( x^{(i)} \right) \right) \right] $$
 # 
-# To compute each element in the summation, we have to compute $h_\theta(x^{(i)})$ for every example $i$, where $h_\theta(x^{(i)}) = g(\theta^T x^{(i)})$ and $g(z) = \frac{1}{1+e^{-z}}$ is the sigmoid function. It turns out that we can compute this quickly for all our examples by using matrix multiplication. Let us define $X$ and $\theta$ as
-# 
-# $$ X = \begin{bmatrix} - \left( x^{(1)} \right)^T - \\ - \left( x^{(2)} \right)^T - \\ \vdots \\ - \left( x^{(m)} \right)^T - \end{bmatrix} \qquad \text{and} \qquad \theta = \begin{bmatrix} \theta_0 \\ \theta_1 \\ \vdots \\ \theta_n \end{bmatrix} $$
-# 
-# Then, by computing the matrix product $X\theta$, we have: 
+# To compute each element in the summation, we have to compute $h_\theta(x^{(i)})$ for every example $i$, where $h_\theta(x^{(i)}) = g(\theta^T x^{(i)})$ and $g(z) = \frac{1}{1+e^{-z}}$ is the sigmoid function. It turns out that we can compute this quickly for all our examples by using matrix multiplication. By computing the matrix product $X\theta$, we have: 
 # 
 # $$ X\theta = \begin{bmatrix} - \left( x^{(1)} \right)^T\theta - \\ - \left( x^{(2)} \right)^T\theta - \\ \vdots \\ - \left( x^{(m)} \right)^T\theta - \end{bmatrix} = \begin{bmatrix} - \theta^T x^{(1)}  - \\ - \theta^T x^{(2)} - \\ \vdots \\ - \theta^T x^{(m)}  - \end{bmatrix} $$
 # 
-# In the last equality, we used the fact that $a^Tb = b^Ta$ if $a$ and $b$ are vectors. This allows us to compute the products $\theta^T x^{(i)}$ for all our examples $i$ in one line of code.
+# This allows us to compute the products $\theta^T x^{(i)}$ for all our examples $i$ in one line of code.
 # 
 # #### 1.3.2 Vectorizing the gradient
 # 
@@ -139,22 +135,8 @@ lambda_t = 3
 # = & \frac{1}{m} X^T \left( h_\theta(x) - y\right)
 # \end{align*}
 # $$
-# 
-# where
-# 
-# $$  h_\theta(x) - y = 
-# \begin{bmatrix}
-# h_\theta\left(x^{(1)}\right) - y^{(1)} \\
-# h_\theta\left(x^{(2)}\right) - y^{(2)} \\
-# \vdots \\
-# h_\theta\left(x^{(m)}\right) - y^{(m)} 
-# \end{bmatrix} $$
-# 
-# Note that $x^{(i)}$ is a vector, while $h_\theta\left(x^{(i)}\right) - y^{(i)}$  is a scalar (single number).
-# The expression above allows us to compute all the partial derivatives
-# without any loops. If you are comfortable with linear algebra, we encourage you to work through the matrix multiplications above to convince yourself that the vectorized version does the same computations. 
-# 
-# Your job is to write the unregularized cost function `lrCostFunction` which returns both the cost function $J(\theta)$ and its gradient $\frac{\partial J}{\partial \theta}$. Your implementation should use the strategy we presented above to calculate $\theta^T x^{(i)}$. You should also use a vectorized approach for the rest of the cost function. A fully vectorized version of `lrCostFunction` should not contain any loops.
+#  
+# Your job is to write the unregularized cost function `lrCostFunction` which returns both the cost function $J(\theta)$ and its gradient $\frac{\partial J}{\partial \theta}$. A fully vectorized version of `lrCostFunction` should not contain any loops.
 #%%
 def lrCostFunction(theta, X, y, lambda_):
     """
@@ -213,7 +195,7 @@ def lrCostFunction(theta, X, y, lambda_):
 # 
 # Now modify your code in lrCostFunction in the [**previous cell**](#lrCostFunction) to account for regularization.
 #
-# Once you finished your implementation, you can call the function `lrCostFunction` to test your solution using the following cell:
+# Once you finished your implementation, you can call the function `lrCostFunction` to test your solution:
 #%%
 J, grad = lrCostFunction(theta_t, X_t, y_t, lambda_t)
 
@@ -314,3 +296,128 @@ def predictOneVsAll(all_theta, X):
 #%%
 pred = predictOneVsAll(all_theta, X)
 print('Training Set Accuracy: {:.2f}%'.format(np.mean(pred == y) * 100))
+#%% [markdown]
+# ## 2 Neural Networks
+# 
+# In the previous part of this exercise, you implemented multi-class logistic regression to recognize handwritten digits. However, logistic regression cannot form more complex hypotheses as it is only a linear classifier (You could add more features - such as polynomial features - to logistic regression, but that can be very expensive to train).
+# 
+# In this part of the exercise, you will implement a neural network to recognize handwritten digits using the same training set as before. The neural network will be able to represent complex models that form non-linear hypotheses. For this week, you will be using parameters from a neural network that we have already trained. Your goal is to implement the feedforward propagation algorithm to use our weights for prediction. In next week’s exercise, you will write the backpropagation algorithm for learning the neural network parameters. 
+# 
+# We start by first reloading and visualizing the dataset which contains the MNIST handwritten digits (this is the same as we did in the first part of this exercise, we reload it here to ensure the variables have not been modified). 
+#%%
+#  training data stored in arrays X, y
+data = loadmat(os.path.join('Data', 'ex3data1.mat'))
+X, y = data['X'], data['y'].ravel()
+
+# set the zero digit to 0, rather than its mapped 10 in this dataset
+# This is an artifact due to the fact that this dataset was used in 
+# MATLAB where there is no index 0
+y[y == 10] = 0
+
+# get number of examples in dataset
+m = y.size
+
+# randomly permute examples, to be used for visualizing one 
+# picture at a time
+indices = np.random.permutation(m)
+
+# Randomly select 100 data points to display
+rand_indices = np.random.choice(m, 100, replace=False)
+sel = X[rand_indices, :]
+
+utils.displayData(sel)
+
+#%% [markdown]
+# 
+# ### 2.1 Model representation 
+# 
+# Our neural network is shown in the following figure.
+# 
+# ![Neural network](Figures/neuralnetwork.png)
+# 
+# It has 3 layers: an input layer, a hidden layer and an output layer.
+# 
+# You have been provided with a set of network parameters ($\Theta^{(1)}$, $\Theta^{(2)}$) already trained by us. These are stored in `ex3weights.mat`. The following cell loads those parameters into  `Theta1` and `Theta2`. The parameters have dimensions that are sized for a neural network with 25 units in the second layer and 10 output units (corresponding to the 10 digit classes).
+
+#%%
+# Setup the parameters you will use for this exercise
+input_layer_size  = 400  # 20x20 Input Images of Digits
+hidden_layer_size = 25   # 25 hidden units
+num_labels = 10          # 10 labels, from 0 to 9
+
+# Load the .mat file, which returns a dictionary 
+weights = loadmat(os.path.join('Data', 'ex3weights.mat'))
+
+# get the model weights from the dictionary
+# Theta1 has size 25 x 401
+# Theta2 has size 10 x 26
+Theta1, Theta2 = weights['Theta1'], weights['Theta2']
+
+# swap first and last columns of Theta2, due to legacy from MATLAB indexing, 
+# since the weight file ex3weights.mat was saved based on MATLAB indexing
+Theta2 = np.roll(Theta2, 1, axis=0)
+#%% [markdown]
+# <a id="section4"></a>
+# ### 2.2 Feedforward Propagation and Prediction
+# 
+# Now you will implement feedforward propagation for the neural network. You will need to complete the code in the function `predict` to return the neural network’s prediction. You should implement the feedforward computation that computes $h_\theta(x^{(i)})$ for every example $i$ and returns the associated predictions. Similar to the one-vs-all classification strategy, the prediction from the neural network will be the label that has the largest output $\left( h_\theta(x) \right)_k$.
+#%%
+def feedfoward(X,Thetas):
+    # Useful variables
+    m = X.shape[0]
+
+    # Column of 1's
+    a = np.concatenate([np.ones((m, 1)), X], axis=1)
+
+    for ii in range(len(Thetas)):
+        # Layer weight 
+        Theta = Thetas[ii]
+
+        # Going through the layer 
+        z = np.dot(a,Theta.T)
+        a = utils.sigmoid(z)
+
+        # Condition if already went through all layers
+        if ii == len(Thetas)-1:
+            return a
+        else:
+           a = np.concatenate([np.ones((m, 1)), a], axis=1) 
+#%%
+def predict(Theta1, Theta2, X):
+    """  
+    Instructions
+    ------------
+    Complete the following code to make predictions using your learned neural
+    network. You should set p to a vector containing labels 
+    between 0 to (num_labels-1).
+
+    """
+    # Make sure the input has two dimensions
+    if X.ndim == 1:
+        X = X[None]  # promote to 2-dimensions
+
+    # You need to return the following variables correctly 
+    p = np.zeros(X.shape[0])
+
+    # ====================== YOUR CODE HERE ======================
+    h = feedfoward(X,[Theta1, Theta2])
+    p = np.argmax(h, axis=1)
+    # =============================================================
+    return p
+#%% [markdown]
+# Once you are done, call your predict function using the loaded set of parameters for `Theta1` and `Theta2`. You should see that the accuracy is about 97.5%.
+#%%
+pred = predict(Theta1, Theta2, X)
+print('Training Set Accuracy: {:.1f}%'.format(np.mean(pred == y) * 100))
+#%% [markdown]
+# After that, we will display images from the training set one at a time, while at the same time printing out the predicted label for the displayed image. 
+# 
+# Run the following cell to display a single image the the neural network's prediction. You can run the cell multiple time to see predictions for different images.
+#%%
+if indices.size > 0:
+    i, indices = indices[0], indices[1:]
+    utils.displayData(X[i, :], figsize=(4, 4))
+    pred = predict(Theta1, Theta2, X[i, :])
+    print('Neural Network Prediction: {}'.format(*pred))
+else:
+    print('No more images to display!')
