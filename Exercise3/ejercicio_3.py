@@ -214,7 +214,6 @@ def lrCostFunction(theta, X, y, lambda_):
 # Now modify your code in lrCostFunction in the [**previous cell**](#lrCostFunction) to account for regularization.
 #
 # Once you finished your implementation, you can call the function `lrCostFunction` to test your solution using the following cell:
-
 #%%
 J, grad = lrCostFunction(theta_t, X_t, y_t, lambda_t)
 
@@ -275,7 +274,6 @@ def oneVsAll(X, y, num_labels, lambda_):
     return all_theta
 #%% [markdown]
 # After you have completed the code for `oneVsAll`, the following cell will use your implementation to train a multi-class classifier. 
-
 #%%
 lambda_ = 0.1
 all_theta = oneVsAll(X, y, num_labels, lambda_)
@@ -313,9 +311,6 @@ def predictOneVsAll(all_theta, X):
     return p
 #%% [markdown]
 # Once you are done, call your `predictOneVsAll` function using the learned value of $\theta$. You should see that the training set accuracy is about 95.1% (i.e., it classifies 95.1% of the examples in the training set correctly).
-
 #%%
 pred = predictOneVsAll(all_theta, X)
 print('Training Set Accuracy: {:.2f}%'.format(np.mean(pred == y) * 100))
-
-#%%
