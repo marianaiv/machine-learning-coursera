@@ -70,14 +70,12 @@ m = y.size
 # 
 # The second part of the training set is a 5000-dimensional vector `y` that contains labels for the training set. 
 # The following cell randomly selects 100 images from the dataset and plots them.
-
 #%%
 # Randomly select 100 data points to display
 rand_indices = np.random.choice(m, 100, replace=False)
 sel = X[rand_indices, :]
 
 utils.displayData(sel)
-
 #%% [markdown]
 # ### 1.2 Model representation
 # 
@@ -89,7 +87,6 @@ utils.displayData(sel)
 # of digit images. Since the images are of size $20 \times 20$, this gives us 400 input layer units (not counting the extra bias unit which always outputs +1). The training data was loaded into the variables `X` and `y` above.
 # 
 # You have been provided with a set of network parameters ($\Theta^{(1)}, \Theta^{(2)}$) already trained by us. These are stored in `ex4weights.mat` and will be loaded in the next cell of this notebook into `Theta1` and `Theta2`. The parameters have dimensions that are sized for a neural network with 25 units in the second layer and 10 output units (corresponding to the 10 digit classes).
-
 #%%
 # Setup the parameters you will use for this exercise
 input_layer_size  = 400  # 20x20 Input Images of Digits
@@ -109,7 +106,6 @@ Theta2 = np.roll(Theta2, 1, axis=0)
 
 # Unroll parameters 
 nn_params = np.concatenate([Theta1.ravel(), Theta2.ravel()])
-
 #%% [markdown]
 # <a id="section1"></a>
 # ### 1.3 Feedforward and cost function
@@ -212,8 +208,11 @@ def nnCostFunction(nn_params,
 
     # Regularization term (not adding the bias terms)
     Jreg = (lambda_/(2*m))*(np.sum(Theta1[:,1:]*Theta1[:,1:])+np.sum(Theta2[:,1:]*Theta2[:,1:]))
-
     J += Jreg
+
+    # Grad regularization 
+    Theta1_grad[:,1:] += (lambda_/m)*Theta1[:,1:]
+    Theta2_grad[:,1:] += (lambda_/m)*Theta2[:,1:]
 
     # ================================================================
     # Unroll gradients
@@ -270,7 +269,6 @@ print('This value should be about                 : 0.383770.')
 # 
 # Now complete the implementation of `sigmoidGradient` in the next cell.
 # <a id="sigmoidGradient"></a>
-
 #%%
 def sigmoidGradient(z):
     """
@@ -288,10 +286,8 @@ def sigmoidGradient(z):
 
     # =============================================================
     return g
-
 #%% [markdown]
 # When you are done, the following cell call `sigmoidGradient` on a given vector `z`. Try testing a few values by calling `sigmoidGradient(z)`. For large values (both positive and negative) of z, the gradient should be close to 0. When $z = 0$, the gradient should be exactly 0.25. Your code should also work with vectors and matrices. For a matrix, your function should perform the sigmoid gradient function on every element.
-
 #%%
 z = np.array([-1, -0.5, 0, 0.5, 1])
 g = sigmoidGradient(z)
@@ -326,10 +322,8 @@ def randInitializeWeights(L_in, L_out, epsilon_init=0.12):
 
     # ============================================================
     return W
-
 #%% [markdown]
 # Execute the following cell to initialize the weights for the 2 layers in the neural network using the `randInitializeWeights` function.
-
 #%%
 print('Initializing Neural Network Parameters ...')
 
@@ -391,4 +385,95 @@ initial_nn_params = np.concatenate([initial_Theta1.ravel(), initial_Theta2.ravel
 # you should see a relative difference that is less than 1e-9.
 #%%
 utils.checkNNGradients(nnCostFunction)
+#%% [markdown]
+# <a id="section5"></a>
+# ### 2.5 Regularized Neural Network
+# 
+# After you have successfully implemented the backpropagation algorithm, you will add regularization to the gradient. To account for regularization, it turns out that you can add this as an additional term *after* computing the gradients using backpropagation.
+# 
+# Specifically, after you have computed $\Delta_{ij}^{(l)}$ using backpropagation, you should add regularization using
+# 
+# $$ \begin{align} 
+# & \frac{\partial}{\partial \Theta_{ij}^{(l)}} J(\Theta) = D_{ij}^{(l)} = \frac{1}{m} \Delta_{ij}^{(l)} & \qquad \text{for } j = 0 \\
+# & \frac{\partial}{\partial \Theta_{ij}^{(l)}} J(\Theta) = D_{ij}^{(l)} = \frac{1}{m} \Delta_{ij}^{(l)} + \frac{\lambda}{m} \Theta_{ij}^{(l)} & \qquad \text{for } j \ge 1
+# \end{align}
+# $$
+# 
+# Note that you should *not* be regularizing the first column of $\Theta^{(l)}$ which is used for the bias term. Furthermore, in the parameters $\Theta_{ij}^{(l)}$, $i$ is indexed starting from 1, and $j$ is indexed starting from 0. Thus, 
+# 
+# $$
+# \Theta^{(l)} = \begin{bmatrix}
+# \Theta_{1,0}^{(i)} & \Theta_{1,1}^{(l)} & \cdots \\
+# \Theta_{2,0}^{(i)} & \Theta_{2,1}^{(l)} & \cdots \\
+# \vdots &  ~ & \ddots
+# \end{bmatrix}
+# $$
+# 
+# [Now modify your code that computes grad in `nnCostFunction` to account for regularization.](#nnCostFunction)
+# 
+# After you are done, the following cell runs gradient checking on your implementation. If your code is correct, you should expect to see a relative difference that is less than 1e-9.
 #%%
+#  Check gradients by running checkNNGradients
+lambda_ = 3
+utils.checkNNGradients(nnCostFunction, lambda_)
+
+# Also output the costFunction debugging values
+debug_J, _  = nnCostFunction(nn_params, input_layer_size,
+                          hidden_layer_size, num_labels, X, y, lambda_)
+
+print('\n\nCost at (fixed) debugging parameters (w/ lambda = %f): %f ' % (lambda_, debug_J))
+print('(for lambda = 3, this value should be about 0.576051)')
+#%% [markdown]
+# ### 2.6 Learning parameters using `scipy.optimize.minimize`
+# 
+# After you have successfully implemented the neural network cost function
+# and gradient computation, the next step we will use `scipy`'s minimization to learn a good set parameters.
+#%%
+#  After you have completed the assignment, change the maxiter to a larger
+#  value to see how more training helps.
+options= {'maxiter': 100}
+
+#  You should also try different values of lambda
+lambda_ = 1
+
+# Create "short hand" for the cost function to be minimized
+costFunction = lambda p: nnCostFunction(p, input_layer_size,
+                                        hidden_layer_size,
+                                        num_labels, X, y, lambda_)
+
+# Now, costFunction is a function that takes in only one argument
+# (the neural network parameters)
+res = optimize.minimize(costFunction,
+                        initial_nn_params,
+                        jac=True,
+                        method='TNC',
+                        options=options)
+
+# get the solution of the optimization
+nn_params = res.x
+        
+# Obtain Theta1 and Theta2 back from nn_params
+Theta1 = np.reshape(nn_params[:hidden_layer_size * (input_layer_size + 1)],
+                    (hidden_layer_size, (input_layer_size + 1)))
+
+Theta2 = np.reshape(nn_params[(hidden_layer_size * (input_layer_size + 1)):],
+                    (num_labels, (hidden_layer_size + 1)))
+#%% [markdown]
+# After the training completes, we will proceed to report the training accuracy of your classifier by computing the percentage of examples it got correct. If your implementation is correct, you should see a reported
+# training accuracy of about 95.3% (this may vary by about 1% due to the random initialization). It is possible to get higher training accuracies by training the neural network for more iterations. We encourage you to try
+# training the neural network for more iterations (e.g., set `maxiter` to 400) and also vary the regularization parameter $\lambda$. With the right learning settings, it is possible to get the neural network to perfectly fit the training set.
+#%%
+pred = utils.predict(Theta1, Theta2, X)
+print('Training Set Accuracy: %f' % (np.mean(pred == y) * 100))
+#%% [markdown]
+# ## 3 Visualizing the Hidden Layer
+# 
+# One way to understand what your neural network is learning is to visualize what the representations captured by the hidden units. Informally, given a particular hidden unit, one way to visualize what it computes is to find an input $x$ that will cause it to activate (that is, to have an activation value 
+# ($a_i^{(l)}$) close to 1). For the neural network you trained, notice that the $i^{th}$ row of $\Theta^{(1)}$ is a 401-dimensional vector that represents the parameter for the $i^{th}$ hidden unit. If we discard the bias term, we get a 400 dimensional vector that represents the weights from each input pixel to the hidden unit.
+# 
+# Thus, one way to visualize the “representation” captured by the hidden unit is to reshape this 400 dimensional vector into a 20 × 20 image and display it (It turns out that this is equivalent to finding the input that gives the highest activation for the hidden unit, given a “norm” constraint on the input (i.e., $||x||_2 \le 1$)). 
+# 
+# The next cell does this by using the `displayData` function and it will show you an image with 25 units,
+# each corresponding to one hidden unit in the network. In your trained network, you should find that the hidden units corresponds roughly to detectors that look for strokes and other patterns in the input.
+#%%
+utils.displayData(Theta1[:, 1:])
