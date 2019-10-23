@@ -1,3 +1,5 @@
 # Machine learning course
 
-Excercises for the machine learning course by Andrew Ng
+Exercises for the machine learning course by Andrew Ng.
+
+Based on https://github.com/dibgerge/ml-coursera-python-assignments
