@@ -144,9 +144,14 @@ def nnCostFunction(nn_params,
     ------------
 
     - Part 1: Feedforward the neural network and return the cost in the 
-              variable J. After implementing Part 1, you can verify that your
-              cost function computation is correct by verifying the cost
-              computed in the following cell.
+              variable J.
+    
+    - Part 2: Implement the backpropagation algorithm to compute the gradients
+              Theta1_grad and Theta2_grad. You should return the partial derivatives of
+              the cost function with respect to Theta1 and Theta2 in Theta1_grad and
+              Theta2_grad, respectively.
+    
+    - Part 3: Implement regularization with the cost function and gradients.
 
     """
     # Reshape nn_params back into the parameters Theta1 and Theta2, the weight matrices
@@ -172,31 +177,38 @@ def nnCostFunction(nn_params,
     
     for jj in range(0,m):
         # Hipotesis for each image (foward propagation)
-        a = X[jj,:]
-
-        # Hidden layer
-        z = np.dot(a,Theta1.T)
-        a = utils.sigmoid(z)
-
-        # Output layer
-        a = np.concatenate([np.ones((1,)), a], axis=0)
-        z = np.dot(a,Theta2.T)
-        h = utils.sigmoid(z)
+        a_1 = X[jj,:].reshape((input_layer_size+1, 1))  
+        z_2 = np.dot(Theta1,a_1)  
+        a_2 = utils.sigmoid(z_2) 
+        a_2 = np.concatenate([np.ones((1,1)), a_2], axis=0) 
+        z_3 = np.dot(Theta2,a_2) 
+        h = utils.sigmoid(z_3) 
 
         # Rewriting y for each image
-        ytemp = np.zeros(num_labels)
+        ytemp = np.zeros(num_labels).reshape(num_labels,1)  
         ytemp[y[jj]] = 1
 
+        # Backpropagation
+        delta3 = h - ytemp
+        delta2 = np.dot(Theta2.T[1:,:],delta3)*sigmoidGradient(z_2)
+        
+        # Acumulate gradient
+        Theta1_grad += np.dot(delta2,a_1.T) 
+        Theta2_grad += np.dot(delta3,a_2.T)
+        
         # Cost for each image
-        Jtemp = np.sum(np.dot(-ytemp, np.log(h)) # first term
-                -np.dot((1-ytemp), np.log(1-h)) # second term
+        Jtemp = np.sum(np.dot(-ytemp.T, np.log(h)) # first term
+                -np.dot((1-ytemp.T), np.log(1-h)) # second term
         )
-
         # Suming all
         J = J + Jtemp 
 
-    # Normalization 
-    J = J/m   
+    # Cost normalization 
+    J = J/m
+
+    # Grad normalization  
+    Theta1_grad = Theta1_grad/m
+    Theta2_grad = Theta2_grad/m  
 
     # Regularization term (not adding the bias terms)
     Jreg = (lambda_/(2*m))*(np.sum(Theta1[:,1:]*Theta1[:,1:])+np.sum(Theta2[:,1:]*Theta2[:,1:]))
@@ -205,7 +217,6 @@ def nnCostFunction(nn_params,
 
     # ================================================================
     # Unroll gradients
-    # grad = np.concatenate([Theta1_grad.ravel(order=order), Theta2_grad.ravel(order=order)])
     grad = np.concatenate([Theta1_grad.ravel(), Theta2_grad.ravel()])
 
     return J, grad
@@ -238,3 +249,146 @@ J, _ = nnCostFunction(nn_params, input_layer_size, hidden_layer_size,
 
 print('Cost at parameters (loaded from ex4weights): %.6f' % J)
 print('This value should be about                 : 0.383770.')
+#%% [markdown]
+# ## 2 Backpropagation
+# 
+# In this part of the exercise, you will implement the backpropagation algorithm to compute the gradient for the neural network cost function. You will need to update the function `nnCostFunction` so that it returns an appropriate value for `grad`. Once you have computed the gradient, you will be able to train the neural network by minimizing the cost function $J(\theta)$ using an advanced optimizer such as `scipy`'s `optimize.minimize`.
+# You will first implement the backpropagation algorithm to compute the gradients for the parameters for the (unregularized) neural network. After you have verified that your gradient computation for the unregularized case is correct, you will implement the gradient for the regularized neural network.
+#%% [markdown]
+# <a id="section3"></a>
+# ### 2.1 Sigmoid Gradient
+# 
+# To help you get started with this part of the exercise, you will first implement
+# the sigmoid gradient function. The gradient for the sigmoid function can be
+# computed as
+# 
+# $$ g'(z) = \frac{d}{dz} g(z) = g(z)\left(1-g(z)\right) $$
+# 
+# where
+# 
+# $$ \text{sigmoid}(z) = g(z) = \frac{1}{1 + e^{-z}} $$
+# 
+# Now complete the implementation of `sigmoidGradient` in the next cell.
+# <a id="sigmoidGradient"></a>
+
+#%%
+def sigmoidGradient(z):
+    """
+    Instructions
+    ------------
+    Compute the gradient of the sigmoid function evaluated at
+    each value of z (z can be a matrix, vector or scalar).
+
+    """
+    g = np.zeros(z.shape)
+
+    # ====================== YOUR CODE HERE ======================
+
+    g = utils.sigmoid(z)*(1-utils.sigmoid(z))
+
+    # =============================================================
+    return g
+
+#%% [markdown]
+# When you are done, the following cell call `sigmoidGradient` on a given vector `z`. Try testing a few values by calling `sigmoidGradient(z)`. For large values (both positive and negative) of z, the gradient should be close to 0. When $z = 0$, the gradient should be exactly 0.25. Your code should also work with vectors and matrices. For a matrix, your function should perform the sigmoid gradient function on every element.
+
+#%%
+z = np.array([-1, -0.5, 0, 0.5, 1])
+g = sigmoidGradient(z)
+print('Sigmoid gradient evaluated at [-1 -0.5 0 0.5 1]:\n  ')
+print(g)
+#%% [markdown]
+# ## 2.2 Random Initialization
+# 
+# When training neural networks, it is important to randomly initialize the parameters for symmetry breaking. One effective strategy for random initialization is to randomly select values for $\Theta^{(l)}$ uniformly in the range $[-\epsilon_{init}, \epsilon_{init}]$. You should use $\epsilon_{init} = 0.12$. This range of values ensures that the parameters are kept small and makes the learning more efficient.
+# 
+# <div class="alert alert-box alert-warning">
+# One effective strategy for choosing $\epsilon_{init}$ is to base it on the number of units in the network. A good choice of $\epsilon_{init}$ is $\epsilon_{init} = \frac{\sqrt{6}}{\sqrt{L_{in} + L_{out}}}$ where $L_{in} = s_l$ and $L_{out} = s_{l+1}$ are the number of units in the layers adjacent to $\Theta^{l}$.
+# </div>
+# 
+# Your job is to complete the function `randInitializeWeights` to initialize the weights for $\Theta$.
+#%%
+def randInitializeWeights(L_in, L_out, epsilon_init=0.12):
+    """     
+    Instructions
+    ------------
+    Initialize W randomly so that we break the symmetry while training
+    the neural network. Note that the first column of W corresponds 
+    to the parameters for the bias unit.
+    """
+
+    # You need to return the following variables correctly 
+    W = np.zeros((L_out, 1 + L_in))
+
+    # ====================== YOUR CODE HERE ======================
+
+    W = np.random.rand(L_out, 1 + L_in) * 2 * epsilon_init - epsilon_init
+
+    # ============================================================
+    return W
+
+#%% [markdown]
+# Execute the following cell to initialize the weights for the 2 layers in the neural network using the `randInitializeWeights` function.
+
+#%%
+print('Initializing Neural Network Parameters ...')
+
+initial_Theta1 = randInitializeWeights(input_layer_size, hidden_layer_size)
+initial_Theta2 = randInitializeWeights(hidden_layer_size, num_labels)
+
+# Unroll parameters
+initial_nn_params = np.concatenate([initial_Theta1.ravel(), initial_Theta2.ravel()], axis=0)
+
+#%% [markdown]
+# <a id="section4"></a>
+# ### 2.4 Backpropagation
+# 
+# ![](Figures/ex4-backpropagation.png)
+# 
+# Now, you will implement the backpropagation algorithm. Recall that the intuition behind the backpropagation algorithm is as follows. Given a training example $(x^{(t)}, y^{(t)})$, we will first run a “forward pass” to compute all the activations throughout the network, including the output value of the hypothesis $h_\theta(x)$. Then, for each node $j$ in layer $l$, we would like to compute an “error term” $\delta_j^{(l)}$ that measures how much that node was “responsible” for any errors in our output.
+# 
+# For an output node, we can directly measure the difference between the network’s activation and the true target value, and use that to define $\delta_j^{(3)}$ (since layer 3 is the output layer). For the hidden units, you will compute $\delta_j^{(l)}$ based on a weighted average of the error terms of the nodes in layer $(l+1)$. In detail, here is the backpropagation algorithm (also depicted in the figure above). You should implement steps 1 to 4 in a loop that processes one example at a time. Concretely, you should implement a for-loop `for t in range(m)` and place steps 1-4 below inside the for-loop, with the $t^{th}$ iteration performing the calculation on the $t^{th}$ training example $(x^{(t)}, y^{(t)})$. Step 5 will divide the accumulated gradients by $m$ to obtain the gradients for the neural network cost function.
+# 
+# 1. Set the input layer’s values $(a^{(1)})$ to the $t^{th }$training example $x^{(t)}$. Perform a feedforward pass, computing the activations $(z^{(2)}, a^{(2)}, z^{(3)}, a^{(3)})$ for layers 2 and 3. Note that you need to add a `+1` term to ensure that the vectors of activations for layers $a^{(1)}$ and $a^{(2)}$ also include the bias unit. In `numpy`, if a 1 is a column matrix, adding one corresponds to `a_1 = np.concatenate([np.ones((m, 1)), a_1], axis=1)`.
+# 
+# 1. For each output unit $k$ in layer 3 (the output layer), set 
+# $$\delta_k^{(3)} = \left(a_k^{(3)} - y_k \right)$$
+# where $y_k \in \{0, 1\}$ indicates whether the current training example belongs to class $k$ $(y_k = 1)$, or if it belongs to a different class $(y_k = 0)$. You may find logical arrays helpful for this task (explained in the previous programming exercise).
+# 
+# 1. For the hidden layer $l = 2$, set 
+# $$ \delta^{(2)} = \left( \Theta^{(2)} \right)^T \delta^{(3)} * g'\left(z^{(2)} \right)$$
+# Note that the symbol $*$ performs element wise multiplication in `numpy`.
+# 
+# 1. Accumulate the gradient from this example using the following formula. Note that you should skip or remove $\delta_0^{(2)}$. In `numpy`, removing $\delta_0^{(2)}$ corresponds to `delta_2 = delta_2[1:]`.
+# $$ \Delta^{(l)} = \Delta^{(l)} + \delta^{(l+1)} (a^{(l)})^{(T)} $$
+# 
+# 1. Obtain the (unregularized) gradient for the neural network cost function by dividing the accumulated gradients by $\frac{1}{m}$:
+# $$ \frac{\partial}{\partial \Theta_{ij}^{(l)}} J(\Theta) = D_{ij}^{(l)} = \frac{1}{m} \Delta_{ij}^{(l)}$$
+#%% [markdown]
+# After you have implemented the backpropagation algorithm, we will proceed to run gradient checking on your implementation. The gradient check will allow you to increase your confidence that your code is
+# computing the gradients correctly.
+# 
+# ### 2.4  Gradient checking 
+# 
+# In your neural network, you are minimizing the cost function $J(\Theta)$. To perform gradient checking on your parameters, you can imagine “unrolling” the parameters $\Theta^{(1)}$, $\Theta^{(2)}$ into a long vector $\theta$. By doing so, you can think of the cost function being $J(\Theta)$ instead and use the following gradient checking procedure.
+# 
+# Suppose you have a function $f_i(\theta)$ that purportedly computes $\frac{\partial}{\partial \theta_i} J(\theta)$; you’d like to check if $f_i$ is outputting correct derivative values.
+# 
+# $$
+# \text{Let } \theta^{(i+)} = \theta + \begin{bmatrix} 0 \\ 0 \\ \vdots \\ \epsilon \\ \vdots \\ 0 \end{bmatrix}
+# \quad \text{and} \quad \theta^{(i-)} = \theta - \begin{bmatrix} 0 \\ 0 \\ \vdots \\ \epsilon \\ \vdots \\ 0 \end{bmatrix}
+# $$
+# 
+# So, $\theta^{(i+)}$ is the same as $\theta$, except its $i^{th}$ element has been incremented by $\epsilon$. Similarly, $\theta^{(i−)}$ is the corresponding vector with the $i^{th}$ element decreased by $\epsilon$. You can now numerically verify $f_i(\theta)$’s correctness by checking, for each $i$, that:
+# 
+# $$ f_i\left( \theta \right) \approx \frac{J\left( \theta^{(i+)}\right) - J\left( \theta^{(i-)} \right)}{2\epsilon} $$
+# 
+# The degree to which these two values should approximate each other will depend on the details of $J$. But assuming $\epsilon = 10^{-4}$, you’ll usually find that the left- and right-hand sides of the above will agree to at least 4 significant digits (and often many more).
+# 
+# We have implemented the function to compute the numerical gradient for you in `computeNumericalGradient` (within the file `utils.py`). While you are not required to modify the file, we highly encourage you to take a look at the code to understand how it works.
+# 
+# In the next cell we will run the provided function `checkNNGradients` which will create a small neural network and dataset that will be used for checking your gradients. If your backpropagation implementation is correct,
+# you should see a relative difference that is less than 1e-9.
+#%%
+utils.checkNNGradients(nnCostFunction)
+#%%
