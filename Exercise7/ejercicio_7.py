@@ -254,6 +254,7 @@ def kMeansInitCentroids(X, K):
     Instructions
     ------------
     You should set centroids to randomly chosen examples from the dataset X.
+    
     """
     m, n = X.shape
     
@@ -349,4 +350,316 @@ ax[0].grid(False)
 ax[1].imshow(X_recovered*255)
 ax[1].set_title('Compressed, with %d colors' % K)
 ax[1].grid(False)
+# %% [markdown]
+# ### 1.5 Optional (ungraded) exercise: Use your own image
+# 
+# In this exercise, modify the code we have supplied in the previous cell to run on one of your own images. Note that if your image is very large, then K-means can take a long time to run. Therefore, we recommend that you resize your images to
+# manageable sizes before running the code. You can also try to vary $K$ to see the effects on the compression.
+# %% [markdown]
+# ## 2 Principal Component Analysis
+# 
+# In this exercise, you will use principal component analysis (PCA) to perform dimensionality reduction. You will first experiment with an example 2D dataset to get intuition on how PCA works, and then use it on a bigger dataset of 5000 face image dataset.
+# 
+# ### 2.1 Example Dataset
+# 
+# To help you understand how PCA works, you will first start with a 2D dataset which has one direction of large variation and one of smaller variation. The cell below will plot the training data, also shown in here:
+# 
+# In this part of the exercise, you will visualize what happens when you use PCA to reduce the data from 2D to 1D. In practice, you might want to reduce data from 256 to 50 dimensions, say; but using lower dimensional data in this example allows us to visualize the algorithms better.
 # %%
+# Load the dataset into the variable X 
+data = loadmat(os.path.join('Data', 'ex7data1.mat'))
+X = data['X']
+
+#  Visualize the example dataset
+pyplot.plot(X[:, 0], X[:, 1], 'bo', ms=10, mec='k', mew=1)
+pyplot.axis([0.5, 6.5, 2, 8])
+pyplot.gca().set_aspect('equal')
+pyplot.grid(False)
+# %% [markdown]
+# <a id="section3"></a>
+# ### 2.2 Implementing PCA
+# 
+# In this part of the exercise, you will implement PCA. PCA consists of two computational steps: 
+# 
+# 1. Compute the covariance matrix of the data.
+# 2. Use SVD (in python we use numpy's implementation `np.linalg.svd`) to compute the eigenvectors $U_1$, $U_2$, $\dots$, $U_n$. These will correspond to the principal components of variation in the data.
+# 
+# First, you should compute the covariance matrix of the data, which is given by:
+# 
+# $$ \Sigma = \frac{1}{m} X^T X$$
+# 
+# where $X$ is the data matrix with examples in rows, and $m$ is the number of examples. Note that $\Sigma$ is a $n \times n$ matrix and not the summation operator. 
+# 
+# After computing the covariance matrix, you can run SVD on it to compute the principal components. In python and `numpy` (or `scipy`), you can run SVD with the following command: `U, S, V = np.linalg.svd(Sigma)`, where `U` will contain the principal components and `S` will contain a diagonal matrix. Note that the `scipy` library also has a similar function to compute SVD `scipy.linalg.svd`. The functions in the two libraries use the same C-based library (LAPACK) for the SVD computation, but the `scipy` version provides more options and arguments to control SVD computation. In this exercise, we will stick with the `numpy` implementation of SVD.
+# 
+# Complete the code in the following cell to implemente PCA.
+# <a id="pca"></a>
+# %%
+def pca(X):
+    """
+    Instructions
+    ------------
+    You should first compute the covariance matrix. Then, you
+    should use the "svd" function to compute the eigenvectors
+    and eigenvalues of the covariance matrix. 
+
+    """
+    # Useful values
+    m, n = X.shape
+
+    # You need to return the following variables correctly.
+    U = np.zeros(n)
+    S = np.zeros(n)
+
+    # ====================== YOUR CODE HERE ======================
+    # Computing covariant matrix
+    Sigma = (1/m)*np.dot(X.T,X)
+    
+    # Eigenvectors and eigenvalues
+    U, S, V = np.linalg.svd(Sigma)
+    
+    # ============================================================
+    return U, S
+# %% [markdown]
+# Before using PCA, it is important to first normalize the data by subtracting the mean value of each feature from the dataset, and scaling each dimension so that they are in the same range.
+# 
+# In the next cell,  this normalization will be performed for you using the `utils.featureNormalize` function.
+# After normalizing the data, you can run PCA to compute the principal components. Your task is to complete the code in the function `pca` to compute the principal components of the dataset. 
+# 
+# Once you have completed the function `pca`, the following cell will run PCA on the example dataset and plot the corresponding principal components found.
+#
+# The following cell will also output the top principal component (eigenvector) found, and you should expect to see an output of about `[-0.707 -0.707]`. (It is possible that `numpy` may instead output the negative of this, since $U_1$ and $-U_1$ are equally valid choices for the first principal component.)
+# %%
+#  Before running PCA, it is important to first normalize X
+X_norm, mu, sigma = utils.featureNormalize(X)
+
+#  Run PCA
+U, S = pca(X_norm)
+
+#  Draw the eigenvectors centered at mean of data. These lines show the
+#  directions of maximum variations in the dataset.
+fig, ax = pyplot.subplots()
+ax.plot(X[:, 0], X[:, 1], 'bo', ms=10, mec='k', mew=0.25)
+
+for i in range(2):
+    ax.arrow(mu[0], mu[1], 1.5 * S[i]*U[0, i], 1.5 * S[i]*U[1, i],
+             head_width=0.25, head_length=0.2, fc='k', ec='k', lw=2, zorder=1000)
+
+ax.axis([0.5, 6.5, 2, 8])
+ax.set_aspect('equal')
+ax.grid(False)
+
+print('Top eigenvector: U[:, 0] = [{:.6f} {:.6f}]'.format(U[0, 0], U[1, 0]))
+print(' (you should expect to see [-0.707107 -0.707107])')
+# %% [markdown]
+# ### 2.3 Dimensionality Reduction with PCA
+# 
+# After computing the principal components, you can use them to reduce the feature dimension of your dataset by projecting each example onto a lower dimensional space, $x^{(i)} \rightarrow z^{(i)}$ (e.g., projecting the data from 2D to 1D). In this part of the exercise, you will use the eigenvectors returned by PCA and
+# project the example dataset into a 1-dimensional space. In practice, if you were using a learning algorithm such as linear regression or perhaps neural networks, you could now use the projected data instead of the original data. By using the projected data, you can train your model faster as there are less dimensions in the input.
+# 
+# <a id="section4"></a>
+# 
+# #### 2.3.1 Projecting the data onto the principal components
+# 
+# You should now complete the code in the function `projectData`. Specifically, you are given a dataset `X`, the principal components `U`, and the desired number of dimensions to reduce to `K`. You should project each example in `X` onto the top `K` components in `U`. Note that the top `K` components in `U` are given by
+# the first `K` columns of `U`, that is `Ureduce = U[:, :K]`.
+# <a id="projectData"></a>
+# %%
+def projectData(X, U, K):
+    """
+    Instructions
+    ------------
+    Compute the projection of the data using only the top K 
+    eigenvectors in U (first K columns). 
+    For the i-th example X[i,:], the projection on to the k-th 
+    eigenvector is given as follows:
+    
+        x = X[i, :]
+        projection_k = np.dot(x,  U[:, k])
+
+    """
+    # You need to return the following variables correctly.
+    Z = np.zeros((X.shape[0], K))
+
+    # ====================== YOUR CODE HERE ======================
+
+    Z = np.dot(X, U[:,:K])
+    
+    # =============================================================
+    return Z
+# %% [markdown]
+# Once you have completed the code in `projectData`, the following cell will project the first example onto the first dimension and you should see a value of about 1.481 (or possibly -1.481, if you got $-U_1$ instead of $U_1$).
+# %%
+#  Project the data onto K = 1 dimension
+K = 1
+Z = projectData(X_norm, U, K)
+print('Projection of the first example: {:.6f}'.format(Z[0, 0]))
+print('(this value should be about    : 1.481274)')
+# %% [markdown]
+# <a id="section5"></a>
+# #### 2.3.2 Reconstructing an approximation of the data
+# 
+# After projecting the data onto the lower dimensional space, you can approximately recover the data by projecting them back onto the original high dimensional space. Your task is to complete the function `recoverData` to project each example in `Z` back onto the original space and return the recovered approximation in `Xrec`.
+# <a id="recoverData"></a>
+# %%
+def recoverData(Z, U, K):
+    """
+    Instructions
+    ------------
+    Compute the approximation of the data by projecting back
+    onto the original space using the top K eigenvectors in U.
+    For the i-th example Z[i,:], the (approximate)
+    recovered data for dimension j is given as follows:
+
+        v = Z[i, :]
+        recovered_j = np.dot(v, U[j, :K])
+
+    Notice that U[j, :K] is a vector of size K.
+    """
+    # You need to return the following variables correctly.
+    X_rec = np.zeros((Z.shape[0], U.shape[0]))
+
+    # ====================== YOUR CODE HERE ======================
+
+    X_rec = np.dot(Z, U[:,:K].T)
+
+    # =============================================================
+    return X_rec
+# %% [markdown]
+# Once you have completed the code in `recoverData`, the following cell will recover an approximation of the first example and you should see a value of about `[-1.047 -1.047]`. The code will then plot the data in this reduced dimension space. This will show you what the data looks like when using only the corresponding eigenvectors to reconstruct it. 
+#
+# In the figure, the original data points are indicated with the blue circles, while the projected data points are indicated with the red circles. The projection effectively only retains the information in the direction given by $U_1$. The dotted lines show the distance from the data points in original space to the projected space. Those dotted lines represent the error measure due to PCA projection.
+# %%
+X_rec  = recoverData(Z, U, K)
+print('Approximation of the first example: [{:.6f} {:.6f}]'.format(X_rec[0, 0], X_rec[0, 1]))
+print('       (this value should be about  [-1.047419 -1.047419])')
+
+#  Plot the normalized dataset (returned from featureNormalize)
+fig, ax = pyplot.subplots(figsize=(5, 5))
+ax.plot(X_norm[:, 0], X_norm[:, 1], 'bo', ms=8, mec='b', mew=0.5)
+ax.set_aspect('equal')
+ax.grid(False)
+pyplot.axis([-3, 2.75, -3, 2.75])
+
+# Draw lines connecting the projected points to the original points
+ax.plot(X_rec[:, 0], X_rec[:, 1], 'ro', mec='r', mew=2, mfc='none')
+for xnorm, xrec in zip(X_norm, X_rec):
+    ax.plot([xnorm[0], xrec[0]], [xnorm[1], xrec[1]], '--k', lw=1)
+# %% [markdown]
+# ### 2.4 Face Image Dataset
+# 
+# In this part of the exercise, you will run PCA on face images to see how it can be used in practice for dimension reduction. The dataset `ex7faces.mat` contains a dataset `X` of face images, each $32 \times 32$ in grayscale. This dataset was based on a [cropped version](http://conradsanderson.id.au/lfwcrop/) of the [labeled faces in the wild](http://vis-www.cs.umass.edu/lfw/) dataset. Each row of `X` corresponds to one face image (a row vector of length 1024). 
+# 
+# The next cell will load and visualize the first 100 of these face images.
+# %%
+#  Load Face dataset
+data = loadmat(os.path.join('Data', 'ex7faces.mat'))
+X = data['X']
+
+#  Display the first 100 faces in the dataset
+utils.displayData(X[:100, :], figsize=(8, 8))
+# %% [markdown]
+# #### 2.4.1 PCA on Faces
+# 
+# To run PCA on the face dataset, we first normalize the dataset by subtracting the mean of each feature from the data matrix `X`.  After running PCA, you will obtain the principal components of the dataset. Notice that each principal component in `U` (each column) is a vector of length $n$ (where for the face dataset, $n = 1024$). It turns out that we can visualize these principal components by reshaping each of them into a $32 \times 32$ matrix that corresponds to the pixels in the original dataset. 
+# 
+# The following cell will first normalize the dataset for you and then run your PCA code. Then, the first 36 principal components (conveniently called eigenfaces) that describe the largest variations are displayed. If you want, you can also change the code to display more principal components to see how they capture more and more details.
+# %%
+#  normalize X by subtracting the mean value from each feature
+X_norm, mu, sigma = utils.featureNormalize(X)
+
+#  Run PCA
+U, S = pca(X_norm)
+
+#  Visualize the top 36 eigenvectors found
+utils.displayData(U[:, :36].T, figsize=(8, 8))
+# %% [markdown]
+# #### 2.4.2 Dimensionality Reduction
+# 
+# Now that you have computed the principal components for the face dataset, you can use it to reduce the dimension of the face dataset. This allows you to use your learning algorithm with a smaller input size (e.g., 100 dimensions) instead of the original 1024 dimensions. This can help speed up your learning algorithm.
+# 
+# The next cell will project the face dataset onto only the first 100 principal components. Concretely, each face image is now described by a vector $z^{(i)} \in \mathbb{R}^{100}$. To understand what is lost in the dimension reduction, you can recover the data using only the projected dataset.
+# %%
+#  Project images to the eigen space using the top k eigenvectors 
+#  If you are applying a machine learning algorithm 
+K = 100
+Z = projectData(X_norm, U, K)
+
+print('The projected data Z has a shape of: ', Z.shape)
+# %% [markdown]
+# In the next cell, an approximate recovery of the data is performed and the original and projected face images
+# are displayed.
+# 
+# From the reconstruction, you can observe that the general structure and appearance of the face are kept while the fine details are lost. This is a remarkable reduction (more than 10x) in the dataset size that can help speed up your learning algorithm significantly. For example, if you were training a neural network to perform person recognition (given a face image, predict the identity of the person), you can use the dimension reduced input of only a 100 dimensions instead of the original pixels.
+# %%
+#  Project images to the eigen space using the top K eigen vectors and 
+#  visualize only using those K dimensions
+#  Compare to the original input, which is also displayed
+K = 100
+X_rec  = recoverData(Z, U, K)
+
+# Display normalized data
+utils.displayData(X_norm[:100, :], figsize=(6, 6))
+pyplot.gcf().suptitle('Original faces')
+
+# Display reconstructed data from only k eigenfaces
+utils.displayData(X_rec[:100, :], figsize=(6, 6))
+pyplot.gcf().suptitle('Recovered faces')
+pass
+# %% [markdown]
+# ### 2.5 Optional (ungraded) exercise: PCA for visualization
+# 
+# In the earlier K-means image compression exercise, you used the K-means algorithm in the 3-dimensional RGB space. We reduced each pixel of the RGB image to be represented by 16 clusters. In the next cell, we have provided code to visualize the final pixel assignments in this 3D space. Each data point is colored according to the cluster it has been assigned to. You can drag your mouse on the figure to rotate and inspect this data in 3 dimensions.
+# %%
+# this allows to have interactive plot to rotate the 3-D plot
+# The double identical statement is on purpose
+# see: https://stackoverflow.com/questions/43545050/using-matplotlib-notebook-after-matplotlib-inline-in-jupyter-notebook-doesnt
+get_ipython().run_line_magic('matplotlib', 'notebook')
+get_ipython().run_line_magic('matplotlib', 'notebook')
+from matplotlib import pyplot
+
+
+A = mpl.image.imread(os.path.join('Data', 'bird_small.png'))
+A /= 255
+X = A.reshape(-1, 3)
+
+# perform the K-means clustering again here
+K = 16
+max_iters = 10
+initial_centroids = kMeansInitCentroids(X, K)
+centroids, idx = utils.runkMeans(X, initial_centroids,
+                                 findClosestCentroids,
+                                 computeCentroids, max_iters)
+
+#  Sample 1000 random indexes (since working with all the data is
+#  too expensive. If you have a fast computer, you may increase this.
+sel = np.random.choice(X.shape[0], size=1000)
+
+fig = pyplot.figure(figsize=(6, 6))
+ax = fig.add_subplot(111, projection='3d')
+
+ax.scatter(X[sel, 0], X[sel, 1], X[sel, 2], cmap='rainbow', c=idx[sel], s=8**2)
+ax.set_title('Pixel dataset plotted in 3D.\nColor shows centroid memberships')
+pass
+# %% [markdown]
+# It turns out that visualizing datasets in 3 dimensions or greater can be cumbersome. Therefore, it is often desirable to only display the data in 2D even at the cost of losing some information. In practice, PCA is often used to reduce the dimensionality of data for visualization purposes. 
+# 
+# In the next cell,we will apply your implementation of PCA to the 3-dimensional data to reduce it to 2 dimensions and visualize the result in a 2D scatter plot. The PCA projection can be thought of as a rotation that selects the view that maximizes the spread of the data, which often corresponds to the “best” view.
+# %%
+# Subtract the mean to use PCA
+X_norm, mu, sigma = utils.featureNormalize(X)
+
+# PCA and project the data to 2D
+U, S = pca(X_norm)
+Z = projectData(X_norm, U, 2)
+
+# Reset matplotlib to non-interactive
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+fig = pyplot.figure(figsize=(6, 6))
+ax = fig.add_subplot(111)
+
+ax.scatter(Z[sel, 0], Z[sel, 1], cmap='rainbow', c=idx[sel], s=64)
+ax.set_title('Pixel dataset plotted in 2D, using PCA for dimensionality reduction')
+ax.grid(False)
+pass
